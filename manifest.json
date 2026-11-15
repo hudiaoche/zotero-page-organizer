@@ -1,0 +1,16 @@
+{
+  "manifest_version": 2,
+  "name": "页面组织器",
+  "version": "2.0.4",
+  "description": "提取 PDF 指定页面，自动命名为「页xx-xx.pdf」保存到源 PDF 所在目录，并链接到 Zotero 库。专为 Zotero 10.x 构建。",
+  "author": "WorkBuddy",
+  "homepage_url": "https://github.com/hudiaoche/zotero-page-organizer",
+  "applications": {
+    "zotero": {
+      "id": "page-organizer@workbuddy.local",
+      "update_url": "https://github.com/hudiaoche/zotero-page-organizer/releases/download/release/update.json",
+      "strict_min_version": "10.0",
+      "strict_max_version": "10.*"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+name: Publish plugin update
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to publish, e.g. v2.0.4"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag and ref
+        id: meta
+        run: |
+          echo "tag=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ref=${{ inputs.tag || github.ref }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Offline tests
+        run: node tests/test.mjs
+
+      - name: Build XPI
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Generate update.json
+        run: node scripts/make-update-json.mjs --tag "${{ steps.meta.outputs.tag }}" --repo "${{ github.repository }}"
+
+      - name: Publish versioned release and fixed update channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p 'require("./manifest.json").version')
+          XPI="dist/page-organizer-${VERSION}.xpi"
+          test -f "$XPI"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "v${VERSION}" --notes "Automated build" "$XPI"
+          else
+            gh release upload "$TAG" "$XPI" --clobber
+          fi
+          if ! gh release view release >/dev/null 2>&1; then
+            gh release create release --target "$GITHUB_SHA" --title "Update channel" \
+              --notes "Fixed update_url channel for Zotero. Do not delete." update.json
+          else
+            gh release upload release update.json --clobber
+          fi
+          echo "update_url -> https://github.com/${GITHUB_REPOSITORY}/releases/download/release/update.json"

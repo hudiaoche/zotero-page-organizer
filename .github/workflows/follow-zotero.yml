@@ -1,0 +1,59 @@
+name: Follow new Zotero major version
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      major:
+        description: "Simulate a Zotero major version, e.g. 11"
+        required: false
+        type: string
+      dry_run:
+        description: "Detect only, do not publish"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  follow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Detect newer Zotero major version
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_MAJOR: ${{ inputs.major }}
+        run: node scripts/follow-zotero.mjs
+
+      - name: Commit compatibility bump and publish
+        if: steps.check.outputs.updated == 'true' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.check.outputs.tag }}
+          MAJOR: ${{ steps.check.outputs.major }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          node scripts/make-update-json.mjs --tag "$TAG" --repo "$GITHUB_REPOSITORY"
+          git add manifest.json update.json
+          git commit -m "chore: support Zotero ${MAJOR}.x (${VERSION})"
+          git tag "$TAG"
+          git push origin "HEAD:${BRANCH}"
+          git push origin "$TAG"
+          gh workflow run release.yml -f tag="$TAG"

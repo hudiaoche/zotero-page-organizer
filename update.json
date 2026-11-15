@@ -1,0 +1,18 @@
+{
+  "addons": {
+    "page-organizer@workbuddy.local": {
+      "updates": [
+        {
+          "version": "2.0.4",
+          "update_link": "https://github.com/hudiaoche/zotero-page-organizer/releases/download/v2.0.4/page-organizer-2.0.4.xpi",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "10.0",
+              "strict_max_version": "10.*"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
