@@ -5,6 +5,22 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+NODE_BIN="${NODE_BIN:-}"
+if [ -z "$NODE_BIN" ]; then
+    if command -v node >/dev/null 2>&1; then
+        NODE_BIN=$(command -v node)
+    else
+        for cand in "$HOME"/.workbuddy/binaries/node/versions/*/bin/node \
+                    /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node; do
+            if [ -x "$cand" ]; then NODE_BIN="$cand"; break; fi
+        done
+    fi
+fi
+if [ -z "$NODE_BIN" ]; then
+    echo "找不到 node：请安装 Node.js，或用 NODE_BIN=/path/to/node 指定路径。" >&2
+    exit 1
+fi
+
 REPO=$(python3 - <<'PY'
 import re, json, subprocess
 repo = ""
@@ -52,7 +68,7 @@ print("版本 ->", v)
 PY
 
 TAG="v$NEW"
-node scripts/make-update-json.mjs --tag "$TAG" --repo "$REPO"
+"$NODE_BIN" scripts/make-update-json.mjs --tag "$TAG" --repo "$REPO"
 ./build.sh
 
 git add manifest.json update.json
