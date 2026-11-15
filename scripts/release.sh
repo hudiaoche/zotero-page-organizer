@@ -71,7 +71,8 @@ TAG="v$NEW"
 "$NODE_BIN" scripts/make-update-json.mjs --tag "$TAG" --repo "$REPO"
 ./build.sh
 
-git add manifest.json update.json
+# 必须提交全部改动：Actions 是从仓库源码重新打包 XPI 的，只提交 manifest 会丢掉功能修改
+git add -A
 if git config user.name >/dev/null 2>&1 && git config user.email >/dev/null 2>&1; then
     git commit -m "release: $TAG"
 else
